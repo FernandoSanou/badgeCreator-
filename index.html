@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Créateur de Badge</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f0f0f0;
+            padding-top: 30px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .canvas-container {
+            position: relative;
+            display: inline-block;
+            background-color: #fff;
+            border: 1px solid #ccc;
+        }
+
+        #canvas {
+            border: 1px solid #ccc;
+            margin-bottom: 15px;
+        }
+
+        .btn-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .control-group {
+            margin-top: 10px;
+        }
+
+        .control-group label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container text-center">
+        <h1>Création de Badge</h1>
+
+        <!-- Image Upload Section -->
+        <div class="control-group">
+            <label for="upload" class="form-label">Téléchargez votre image</label>
+            <input type="file" class="form-control" id="upload" accept="image/*">
+        </div>
+
+        <div class="canvas-container">
+            <!-- Canvas Section -->
+            <canvas id="canvas" width="200" height="200"></canvas>
+        </div>
+
+        <!-- Controls Section -->
+        <div class="control-group">
+            <label for="resize" class="form-label">Redimensionner l'image</label>
+            <input type="range" id="resize" min="0.1" max="2" step="0.1" value="1" class="form-range">
+        </div>
+
+        <div class="control-group">
+            <label for="rotate" class="form-label">Inclinaison de l'image</label>
+            <input type="range" id="rotate" min="0" max="360" value="0" class="form-range">
+        </div>
+
+        <!-- New Range for X Position -->
+        <div class="control-group">
+            <label for="moveX" class="form-label">Déplacer X</label>
+            <input type="range" id="moveX" min="-100" max="100" value="0" class="form-range">
+        </div>
+
+        <!-- New Range for Y Position -->
+        <div class="control-group">
+            <label for="moveY" class="form-label">Déplacer Y</label>
+            <input type="range" id="moveY" min="-100" max="100" value="0" class="form-range">
+        </div>
+
+        <div class="btn-container">
+            <button id="reset" class="btn btn-warning">Réinitialiser</button>
+            <button id="download" class="btn btn-success">Télécharger</button>
+        </div>
+    </div>
+
+    <!-- Add Fabric.js -->
+    <script src="https://cdn.jsdelivr.net/npm/fabric@4.5.1/dist/fabric.min.js"></script>
+    <script>
+        var canvas = new fabric.Canvas('canvas');
+        var uploadedImg, badgeImg;
+        
+        // Badge image (cadre) par défaut
+        fabric.Image.fromURL('badge.png', function(img) {
+            badgeImg = img;
+            badgeImg.set({
+                left: 0,
+                top: 0,
+                scaleX: canvas.width / img.width,
+                scaleY: canvas.height / img.height,
+                selectable: false
+            });
+            canvas.add(badgeImg);
+            canvas.renderAll();
+        });
+
+        // Fonction pour importer l'image téléchargée par l'utilisateur
+        document.getElementById('upload').addEventListener('change', function(e) {
+            var reader = new FileReader();
+            reader.onload = function(event) {
+                var imgElement = new Image();
+                imgElement.src = event.target.result;
+                
+                imgElement.onload = function() {
+                    // Si une image existe déjà, on la supprime
+                    if (uploadedImg) {
+                        canvas.remove(uploadedImg);
+                    }
+
+                    // Ajouter l'image téléchargée au canvas
+                    uploadedImg = new fabric.Image(imgElement, {
+                        left: 0,
+                        top: 0,
+                        hasControls: true,
+                        lockRotation: false,
+                        centeredScaling: true
+                    });
+
+                    // Redimensionner l'image à la taille du canvas (200x200)
+                    uploadedImg.scaleToWidth(canvas.width);
+                    uploadedImg.scaleToHeight(canvas.height);
+
+                    // Ajouter l'image téléchargée au canvas
+                    canvas.add(uploadedImg);
+                    
+                    // Placer l'image en arrière-plan par rapport au badge
+                    uploadedImg.sendToBack();
+
+                    // Mise à jour du canvas
+                    canvas.renderAll();
+                };
+            };
+            reader.readAsDataURL(e.target.files[0]); // Lire l'image importée
+        });
+
+        // Contrôle de redimensionnement
+        document.getElementById('resize').addEventListener('input', function(e) {
+            var scale = parseFloat(e.target.value);
+            if (uploadedImg) {
+                uploadedImg.set({
+                    scaleX: scale,
+                    scaleY: scale
+                });
+                canvas.renderAll();
+            }
+        });
+
+        // Contrôle de rotation
+        document.getElementById('rotate').addEventListener('input', function(e) {
+            var angle = parseInt(e.target.value);
+            if (uploadedImg) {
+                uploadedImg.set({
+                    angle: angle
+                });
+                canvas.renderAll();
+            }
+        });
+
+        // Contrôle de déplacement sur X
+        document.getElementById('moveX').addEventListener('input', function(e) {
+            var moveX = parseInt(e.target.value);
+            if (uploadedImg) {
+                uploadedImg.set({
+                    left: moveX
+                });
+                canvas.renderAll();
+            }
+        });
+
+        // Contrôle de déplacement sur Y
+        document.getElementById('moveY').addEventListener('input', function(e) {
+            var moveY = parseInt(e.target.value);
+            if (uploadedImg) {
+                uploadedImg.set({
+                    top: moveY
+                });
+                canvas.renderAll();
+            }
+        });
+
+        // Réinitialiser les transformations
+        document.getElementById('reset').addEventListener('click', function() {
+            if (uploadedImg) {
+                uploadedImg.set({
+                    left: 0,
+                    top: 0,
+                    scaleX: 1,
+                    scaleY: 1,
+                    angle: 0
+                });
+                canvas.renderAll();
+            }
+        });
+
+        // Télécharger l'image avec le badge
+        document.getElementById('download').addEventListener('click', function() {
+            var dataURL = canvas.toDataURL({
+                format: 'png',
+                multiplier: 2 // Double la résolution pour un téléchargement de meilleure qualité
+            });
+            var link = document.createElement('a');
+            link.href = dataURL;
+            link.download = 'badge_personnalisé.png';
+            link.click();
+        });
+    </script>
+</body>
+</html>
